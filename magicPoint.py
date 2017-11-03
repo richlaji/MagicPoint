@@ -15,6 +15,7 @@ from tensorflow.python.training import moving_averages
 import numpy as np
 
 import os
+import sys
 os.environ["CUDA_DEVICE_ORDER"] = "PCI_BUS_ID"
 os.environ["CUDA_VISIBLE_DEVICES"] = "0"
 
