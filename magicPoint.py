@@ -17,11 +17,11 @@ import numpy as np
 import os
 import sys
 os.environ["CUDA_DEVICE_ORDER"] = "PCI_BUS_ID"
-os.environ["CUDA_VISIBLE_DEVICES"] = "0"
+os.environ["CUDA_VISIBLE_DEVICES"] = "1"
 
 height = 120
 width = 160
-itTimes = 2001
+itTimes = 12001
 testTimes = 500
 saveTimes = 2000
 batchSize = 10
@@ -213,11 +213,12 @@ def trainMagicPoint(dataSetPath,restore,modelName,modelTrainTimes):
     testLbs = labels[testIndex:testIndex+3]
 
     with tf.Session() as sess:
-        sess.run(tf.global_variables_initializer())
         #restore model
         if restore:
             saver = tf.train.Saver()
             saver.restore(sess,modelName)
+        else:
+            sess.run(tf.global_variables_initializer())
         for it in range(modelTrainTimes+itTimes)[modelTrainTimes:]:
             #for train
             imgs,lbs = readData(dataSetPath,it*batchSize%totalData,it*batchSize%totalData+batchSize-1)
@@ -231,7 +232,7 @@ def trainMagicPoint(dataSetPath,restore,modelName,modelTrainTimes):
                 print(test.shape)
                 testImage(test,str(it))
             #save code
-            if it % saveTimes == 0:
+            if (it % saveTimes == 0) & restore:
                 print('save ' + str(it) + ' model')
                 saver = tf.train.Saver()
                 saver.save(sess,"model/model_"+str(it)+".ckpt")
@@ -280,16 +281,22 @@ def testImage(test,name):
     heatMap1 = np.zeros((height,width))
     heatMap2 = np.zeros((height,width))
     heatMap3 = np.zeros((height,width))
-    max = 0
+    max1 = 0
+    max2 = 0
+    max3 = 0
     for i in range(int(height/8)):
         for j in range(int(width/8)):
             for k in range(64):
-                if test[0][i][j][k] > max:
-                    max = test[1][i][j][k]
+                if test[0][i][j][k] > max1:
+                    max1 = test[0][i][j][k]
+                if test[1][i][j][k] > max2:
+                    max2 = test[1][i][j][k]
+                if test[2][i][j][k] > max3:
+                    max3 = test[2][i][j][k]
                 heatMap1[int(i*8+k/8)][int(j*8+k%8)] = int(test[0][i][j][k] * 255)
                 heatMap2[int(i*8+k/8)][int(j*8+k%8)] = int(test[1][i][j][k] * 255)
                 heatMap3[int(i*8+k/8)][int(j*8+k%8)] = int(test[2][i][j][k] * 255)
-    print(max)        
+    print(max1,max2,max3)        
     cv2.imwrite('1_'+name+'.png',heatMap1)
     cv2.imwrite('2_'+name+'.png',heatMap2)
     cv2.imwrite('3_'+name+'.png',heatMap3)
@@ -306,8 +313,8 @@ def findPoint(heatMap):
                 print(j,i)
 
 if __name__ == '__main__':
-    #trainMagicPoint(sys.argv[1],True,'model/model_'+sys.argv[2]+'.ckpt',sys.argv[2])
-    testMagicPoint(sys.argv[1],'model/model_'+sys.argv[2]+'.ckpt')
+    trainMagicPoint(sys.argv[1],True,'model/model_'+sys.argv[2]+'.ckpt',sys.argv[2])
+    #testMagicPoint(sys.argv[1],'model/model_'+sys.argv[2]+'.ckpt')
     #img = cv2.imread('2_test.png',0)
     #findPoint(img)
 
