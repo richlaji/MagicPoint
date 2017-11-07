@@ -345,7 +345,7 @@ def drawCorner(originImg,corners):
     return originImg
 
 if __name__ == '__main__':
-    trainMagicPoint(sys.argv[1],False,'model/model_'+sys.argv[2]+'.ckpt',sys.argv[2])
+    trainMagicPoint(sys.argv[1],True,'model/model_'+sys.argv[2]+'.ckpt',sys.argv[2])
     #testMagicPoint(sys.argv[1],'model/model_'+sys.argv[2]+'.ckpt')
     #img = cv2.imread('2_test.png',0)
     #findPoint(img)
