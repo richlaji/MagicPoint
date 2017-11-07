@@ -14,10 +14,11 @@ from tensorflow.python.training import moving_averages
 
 import numpy as np
 
+import time
 import os
 import sys
 os.environ["CUDA_DEVICE_ORDER"] = "PCI_BUS_ID"
-os.environ["CUDA_VISIBLE_DEVICES"] = "1"
+os.environ["CUDA_VISIBLE_DEVICES"] = "0"
 
 height = 120
 width = 160
@@ -212,6 +213,8 @@ def trainMagicPoint(dataSetPath,restore,modelName,modelTrainTimes):
     testImgs = images[testIndex:testIndex+3]
     testLbs = labels[testIndex:testIndex+3]
 
+    b = time.time()
+
     with tf.Session() as sess:
         #restore model
         if restore:
@@ -231,12 +234,16 @@ def trainMagicPoint(dataSetPath,restore,modelName,modelTrainTimes):
                 test = sess.run(softmax,feed_dict={x: testImgs, y_: testLbs, isTrain: False})
                 print(test.shape)
                 testImage(test,str(it))
+                e = time.time()
+                print("cost time: " + str(e-b))
+                b = e
             #save code
-            if (it % saveTimes == 0) & restore:
+            if it % saveTimes == 0:
                 print('save ' + str(it) + ' model')
                 saver = tf.train.Saver()
                 saver.save(sess,"model/model_"+str(it)+".ckpt")
 
+#only test one or more image without training
 def testMagicPoint(dataSetPath,modelName):
     # Import data
     #mnist = input_data.read_data_sets(FLAGS.data_dir, one_hot=True)
@@ -276,7 +283,12 @@ def testMagicPoint(dataSetPath,modelName):
         test = sess.run(softmax,feed_dict={x: testImgs, y_: testLbs, isTrain: False})
         print(test.shape)
         testImage(test,'test')
+        for i in range(len(testImgs)):
+            corners = findCorner(test[i])
+            imgWithCorner = drawCorner(testImgs[i],corners)
+            cv2.imwrite(str(i+1)+'_withCorner.png',imgWithCorner)
 
+#test image func
 def testImage(test,name):
     heatMap1 = np.zeros((height,width))
     heatMap2 = np.zeros((height,width))
@@ -301,6 +313,7 @@ def testImage(test,name):
     cv2.imwrite('2_'+name+'.png',heatMap2)
     cv2.imwrite('3_'+name+'.png',heatMap3)
 
+#find corner through simple way
 def findPoint(heatMap):
     max = 0
     for i in range(height):
@@ -312,9 +325,28 @@ def findPoint(heatMap):
             if heatMap[i][j] > 0.9 * max:
                 print(j,i)
 
+#find corner through compare
+def findCorner(heatMap):
+    corner = []
+    for i in range(int(height/8)):
+        for j in range(int(width/8)):
+            if heatMap[i][j][64] < 0.05:
+                maxIndex = 0
+                for k in range(64):
+                    if heatMap[i][j][k] > heatMap[i][j][maxIndex]:
+                        maxIndex = k
+                corner.append((int(j*8+maxIndex%8),int(i*8+maxIndex/8)))
+    print('corner:'+str(len(corner)))
+    return corner
+
+def drawCorner(originImg,corners):
+    for c in corners:
+        originImg = cv2.circle(originImg,c,5,(255,255,255))
+    return originImg
+
 if __name__ == '__main__':
-    trainMagicPoint(sys.argv[1],True,'model/model_'+sys.argv[2]+'.ckpt',sys.argv[2])
-    #testMagicPoint(sys.argv[1],'model/model_'+sys.argv[2]+'.ckpt')
+    #trainMagicPoint(sys.argv[1],True,'model/model_'+sys.argv[2]+'.ckpt',sys.argv[2])
+    testMagicPoint(sys.argv[1],'model/model_'+sys.argv[2]+'.ckpt')
     #img = cv2.imread('2_test.png',0)
     #findPoint(img)
 
