@@ -51,29 +51,38 @@ def readData(dataSetPath,begin,end):
     return images,label
 
 def fastDetect(img):
-	fast = cv2.FastFeatureDetector_create()
-	kp = fast.detect(img,None)
-	cv2.drawKeypoints(img,kp,img,color = 255)
-	return img
+    fast = cv2.FastFeatureDetector_create()
+    kp = fast.detect(img,None)
+    cv2.drawKeypoints(img,kp,img,color = 255)
+    return img
 
 def siftDetect(img):
-	sift = cv2.xfeatures2d.SIFT_create()
-	kp = sift.detect(img)
-	cv2.drawKeypoints(img,kp,img,color = 255)
-	return img
+    sift = cv2.xfeatures2d.SIFT_create()
+    kp = sift.detect(img)
+    cv2.drawKeypoints(img,kp,img,color = 255)
+    return img
 
 def testFeatureDetector():
-	img1 = cv2.imread('3.png')
-	img2 = cv2.imread('4.png')
-	img3 = cv2.imread('5.png')
-	img1 = fastDetect(img1)
-	img2 = fastDetect(img2)
-	img3 = fastDetect(img3)
-	cv2.imshow('i1',img1)
-	cv2.imshow('i2',img2)
-	cv2.imshow('i3',img3)
-	cv2.waitKey(0)
+    img1 = cv2.imread('1.png')
+    img2 = cv2.imread('2.png')
+    img3 = cv2.imread('3.png')
+    img1 = fastDetect(img1)
+    img2 = fastDetect(img2)
+    img3 = fastDetect(img3)
+    cv2.imwrite('compare/1_fast.png',img1)
+    cv2.imwrite('compare/2_fast.png',img2)
+    cv2.imwrite('compare/3_fast.png',img3)
 
+def testSIFTDetector():
+    img1 = cv2.imread('1.png')
+    img2 = cv2.imread('2.png')
+    img3 = cv2.imread('3.png')
+    img1 = siftDetect(img1)
+    img2 = siftDetect(img2)
+    img3 = siftDetect(img3)
+    cv2.imwrite('compare/1_sift.png',img1)
+    cv2.imwrite('compare/2_sift.png',img2)
+    cv2.imwrite('compare/3_sift.png',img3)
 
 def save():
     w = tf.Variable(tf.random_uniform([10,1]),name='w')
@@ -98,9 +107,9 @@ def load():
 
 if __name__ == '__main__':
     #save()
-    load()
+    #load()
     #images,labels = readData(sys.argv[1],0,8)
     #print images.shape
     #print labels.shape
-
-	
+    testFeatureDetector()
+    testSIFTDetector()

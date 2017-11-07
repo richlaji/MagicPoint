@@ -22,13 +22,13 @@ os.environ["CUDA_VISIBLE_DEVICES"] = "0"
 
 height = 120
 width = 160
-itTimes = 12001
-testTimes = 500
-saveTimes = 2000
+itTimes = 24001
+testTimes = 2000
+saveTimes = 6000
 batchSize = 10
 totalData = 120000
 
-testIndex = 0
+testIndex = 294
 
 def readData(dataSetPath,begin,end):
     #read label & image (from begin to end)
@@ -161,13 +161,13 @@ def max_pool_2x2(x):
 
 def weight_variable(shape,n):
     """weight_variable generates a weight variable of a given shape."""
-    initial = tf.truncated_normal(shape, stddev=0.01)
+    initial = tf.truncated_normal(shape, stddev=0.05)
     return tf.Variable(initial,name=n)
 
 
 def bias_variable(shape,n):
     """bias_variable generates a bias variable of a given shape."""
-    initial = tf.constant(0.01, shape=shape)
+    initial = tf.constant(0.05, shape=shape)
     return tf.Variable(initial,name=n)
 
 
@@ -194,7 +194,7 @@ def trainMagicPoint(dataSetPath,restore,modelName,modelTrainTimes):
     cross_entropy = tf.reduce_mean(cross_entropy)
 
     with tf.name_scope('adam_optimizer'):
-        train_step = tf.train.AdamOptimizer(5e-5).minimize(cross_entropy)
+        train_step = tf.train.AdamOptimizer(1e-5).minimize(cross_entropy)
 
     #with tf.name_scope('accuracy'):
     #  correct_prediction = tf.equal(tf.argmax(y_conv, 1), tf.argmax(y_, 1))
@@ -217,7 +217,7 @@ def trainMagicPoint(dataSetPath,restore,modelName,modelTrainTimes):
 
     with tf.Session() as sess:
         #restore model
-        if restore:
+        if restore & (modelTrainTimes != 0):
             saver = tf.train.Saver()
             saver.restore(sess,modelName)
         else:
@@ -286,7 +286,7 @@ def testMagicPoint(dataSetPath,modelName):
         for i in range(len(testImgs)):
             corners = findCorner(test[i])
             imgWithCorner = drawCorner(testImgs[i],corners)
-            cv2.imwrite(str(i+1)+'_withCorner.png',imgWithCorner)
+            cv2.imwrite(str(i+1)+'_withCorner.png',imgWithCorner*255)
 
 #test image func
 def testImage(test,name):
@@ -330,7 +330,7 @@ def findCorner(heatMap):
     corner = []
     for i in range(int(height/8)):
         for j in range(int(width/8)):
-            if heatMap[i][j][64] < 0.05:
+            if heatMap[i][j][64] < 0.0151:
                 maxIndex = 0
                 for k in range(64):
                     if heatMap[i][j][k] > heatMap[i][j][maxIndex]:
@@ -341,12 +341,12 @@ def findCorner(heatMap):
 
 def drawCorner(originImg,corners):
     for c in corners:
-        originImg = cv2.circle(originImg,c,5,(255,255,255))
+        originImg = cv2.circle(originImg,c,5,(1,1,1))
     return originImg
 
 if __name__ == '__main__':
-    #trainMagicPoint(sys.argv[1],True,'model/model_'+sys.argv[2]+'.ckpt',sys.argv[2])
-    testMagicPoint(sys.argv[1],'model/model_'+sys.argv[2]+'.ckpt')
+    trainMagicPoint(sys.argv[1],False,'model/model_'+sys.argv[2]+'.ckpt',sys.argv[2])
+    #testMagicPoint(sys.argv[1],'model/model_'+sys.argv[2]+'.ckpt')
     #img = cv2.imread('2_test.png',0)
     #findPoint(img)
 
