@@ -18,15 +18,16 @@ import time
 import os
 import sys
 os.environ["CUDA_DEVICE_ORDER"] = "PCI_BUS_ID"
-os.environ["CUDA_VISIBLE_DEVICES"] = "0"
+os.environ["CUDA_VISIBLE_DEVICES"] = "1"
 
 height = 120
 width = 160
-itTimes = 24001
+itTimes = 48001
 testTimes = 500
 saveTimes = 2000
 batchSize = 10
 totalData = 120000
+learningRate = 5e-5
 
 testIndex = 3
 
@@ -194,7 +195,7 @@ def trainMagicPoint(dataSetPath,restore,modelName,modelTrainTimes):
     cross_entropy = tf.reduce_mean(cross_entropy)
 
     with tf.name_scope('adam_optimizer'):
-        train_step = tf.train.AdamOptimizer(1e-5).minimize(cross_entropy)
+        train_step = tf.train.AdamOptimizer(learningRate).minimize(cross_entropy)
 
     #with tf.name_scope('accuracy'):
     #  correct_prediction = tf.equal(tf.argmax(y_conv, 1), tf.argmax(y_, 1))
@@ -328,7 +329,7 @@ def testMagicPointForAImg(filename,modelName):
         print(test.shape)
         testImage(test,'test')
         for i in range(len(testImgs)):
-            corners = findCorner(test[i])
+            corners = findCorner2(test[i])
             imgWithCorner = drawCorner(testImgs[i],corners)
             cv2.imwrite(str(i+1)+'_withCorner.png',imgWithCorner*255)
 
@@ -349,7 +350,6 @@ def testImage(test,name):
     for t in range(test.shape[0]): 
         print(max[t],)
         cv2.imwrite(str(t+1)+'_'+name+'.png',heatMap[t])
-    print(" ")
 
 #find corner through simple way
 def findPoint(heatMap):
