@@ -18,17 +18,17 @@ import time
 import os
 import sys
 os.environ["CUDA_DEVICE_ORDER"] = "PCI_BUS_ID"
-os.environ["CUDA_VISIBLE_DEVICES"] = "1"
+os.environ["CUDA_VISIBLE_DEVICES"] = "0"
 
 height = 120
 width = 160
 itTimes = 24001
-testTimes = 2000
-saveTimes = 6000
+testTimes = 500
+saveTimes = 2000
 batchSize = 10
 totalData = 120000
 
-testIndex = 294
+testIndex = 3
 
 def readData(dataSetPath,begin,end):
     #read label & image (from begin to end)
@@ -161,13 +161,13 @@ def max_pool_2x2(x):
 
 def weight_variable(shape,n):
     """weight_variable generates a weight variable of a given shape."""
-    initial = tf.truncated_normal(shape, stddev=0.05)
+    initial = tf.truncated_normal(shape, stddev=0.01)
     return tf.Variable(initial,name=n)
 
 
 def bias_variable(shape,n):
     """bias_variable generates a bias variable of a given shape."""
-    initial = tf.constant(0.05, shape=shape)
+    initial = tf.constant(0.01, shape=shape)
     return tf.Variable(initial,name=n)
 
 
@@ -194,7 +194,7 @@ def trainMagicPoint(dataSetPath,restore,modelName,modelTrainTimes):
     cross_entropy = tf.reduce_mean(cross_entropy)
 
     with tf.name_scope('adam_optimizer'):
-        train_step = tf.train.AdamOptimizer(5e-5).minimize(cross_entropy)
+        train_step = tf.train.AdamOptimizer(1e-5).minimize(cross_entropy)
 
     #with tf.name_scope('accuracy'):
     #  correct_prediction = tf.equal(tf.argmax(y_conv, 1), tf.argmax(y_, 1))
@@ -207,11 +207,11 @@ def trainMagicPoint(dataSetPath,restore,modelName,modelTrainTimes):
     #train_writer.add_graph(tf.get_default_graph())
 
     #for test
-    images,labels = readData(dataSetPath,0,299)
+    images,labels = readData(dataSetPath,testIndex,testIndex+2)
 
     #trainNum = 250
-    testImgs = images[testIndex:testIndex+3]
-    testLbs = labels[testIndex:testIndex+3]
+    testImgs = images
+    testLbs = labels
 
     b = time.time()
 
@@ -222,6 +222,7 @@ def trainMagicPoint(dataSetPath,restore,modelName,modelTrainTimes):
             saver.restore(sess,modelName)
         else:
             sess.run(tf.global_variables_initializer())
+            print("init variables")
         for it in range(modelTrainTimes+itTimes)[modelTrainTimes:]:
             #for train
             imgs,lbs = readData(dataSetPath,it*batchSize%totalData,it*batchSize%totalData+batchSize-1)
@@ -266,11 +267,11 @@ def testMagicPoint(dataSetPath,modelName):
     cross_entropy = tf.reduce_mean(cross_entropy)
 
     #for test
-    images,labels = readData(dataSetPath,0,299)
+    images,labels = readData(dataSetPath,testIndex,testIndex+2)
 
     #trainNum = 250
-    testImgs = images[testIndex:testIndex+3]
-    testLbs = labels[testIndex:testIndex+3]
+    testImgs = images
+    testLbs = labels
 
     with tf.Session() as sess:
         #sess.run(tf.global_variables_initializer())
@@ -288,30 +289,67 @@ def testMagicPoint(dataSetPath,modelName):
             imgWithCorner = drawCorner(testImgs[i],corners)
             cv2.imwrite(str(i+1)+'_withCorner.png',imgWithCorner*255)
 
+#only test one or more image without training
+def testMagicPointForAImg(filename,modelName):
+    # Import data
+    #mnist = input_data.read_data_sets(FLAGS.data_dir, one_hot=True)
+
+    # Create the model
+    x = tf.placeholder(tf.float32, [None, height, width])
+
+    # Define loss and optimizer
+    # pixel level corner detection
+    y_ = tf.placeholder(tf.float32, [None, height/8, width/8, 65])
+    isTrain = tf.placeholder(tf.bool)
+
+    # Build the graph for the deep net
+    y_conv = deepnn(x,isTrain)
+    softmax = tf.nn.softmax(y_conv)
+
+    with tf.name_scope('loss'):
+        cross_entropy = tf.nn.softmax_cross_entropy_with_logits(labels=y_,
+                                                            logits=y_conv)
+    cross_entropy = tf.reduce_mean(cross_entropy)
+
+    testImgs = cv2.imread(filename,0)
+    testImgs = testImgs.astype(float)
+    testImgs /= 255
+    testImgs = [testImgs]
+
+    with tf.Session() as sess:
+        #sess.run(tf.global_variables_initializer())
+        #restore model
+        saver = tf.train.Saver()
+        saver.restore(sess,modelName)
+        
+        #print(sess.run(cross_entropy, feed_dict={x: testImgs, y_: testLbs, isTrain: False}))
+        #test calculate
+        test = sess.run(softmax,feed_dict={x: testImgs, isTrain: False})
+        print(test.shape)
+        testImage(test,'test')
+        for i in range(len(testImgs)):
+            corners = findCorner(test[i])
+            imgWithCorner = drawCorner(testImgs[i],corners)
+            cv2.imwrite(str(i+1)+'_withCorner.png',imgWithCorner*255)
+
 #test image func
 def testImage(test,name):
-    heatMap1 = np.zeros((height,width))
-    heatMap2 = np.zeros((height,width))
-    heatMap3 = np.zeros((height,width))
-    max1 = 0
-    max2 = 0
-    max3 = 0
+    heatMap = []
+    max = []
+    for t in range(test.shape[0]):
+        heatMap.append(np.zeros([height,width]))
+        max.append(0)
     for i in range(int(height/8)):
         for j in range(int(width/8)):
             for k in range(64):
-                if test[0][i][j][k] > max1:
-                    max1 = test[0][i][j][k]
-                if test[1][i][j][k] > max2:
-                    max2 = test[1][i][j][k]
-                if test[2][i][j][k] > max3:
-                    max3 = test[2][i][j][k]
-                heatMap1[int(i*8+k/8)][int(j*8+k%8)] = int(test[0][i][j][k] * 255)
-                heatMap2[int(i*8+k/8)][int(j*8+k%8)] = int(test[1][i][j][k] * 255)
-                heatMap3[int(i*8+k/8)][int(j*8+k%8)] = int(test[2][i][j][k] * 255)
-    print(max1,max2,max3)        
-    cv2.imwrite('1_'+name+'.png',heatMap1)
-    cv2.imwrite('2_'+name+'.png',heatMap2)
-    cv2.imwrite('3_'+name+'.png',heatMap3)
+                for t in range(test.shape[0]):
+                    heatMap[t][int(i*8+k/8)][int(j*8+k%8)] = int(test[t][i][j][k] * 255)
+                    if test[t][i][j][k] > max[t]:
+                        max[t] = test[t][i][j][k]      
+    for t in range(test.shape[0]): 
+        print(max[t],)
+        cv2.imwrite(str(t+1)+'_'+name+'.png',heatMap[t])
+    print(" ")
 
 #find corner through simple way
 def findPoint(heatMap):
@@ -326,15 +364,31 @@ def findPoint(heatMap):
                 print(j,i)
 
 #find corner through compare
+#if [64] is less than a value then may be a corner in this region
 def findCorner(heatMap):
     corner = []
     for i in range(int(height/8)):
         for j in range(int(width/8)):
-            if heatMap[i][j][64] < 0.0151:
+            if heatMap[i][j][64] < 0.01:
                 maxIndex = 0
                 for k in range(64):
                     if heatMap[i][j][k] > heatMap[i][j][maxIndex]:
                         maxIndex = k
+                corner.append((int(j*8+maxIndex%8),int(i*8+maxIndex/8)))
+    print('corner:'+str(len(corner)))
+    return corner
+
+#find corner through compare
+#for each region a corner should be the max and greater than a value
+def findCorner2(heatMap):
+    corner = []
+    for i in range(int(height/8)):
+        for j in range(int(width/8)):
+            maxIndex = 64
+            for k in range(64):
+                if (heatMap[i][j][k] > heatMap[i][j][maxIndex]) & (heatMap[i][j][k] > 0.08):
+                    maxIndex = k
+            if maxIndex != 64:
                 corner.append((int(j*8+maxIndex%8),int(i*8+maxIndex/8)))
     print('corner:'+str(len(corner)))
     return corner
@@ -345,8 +399,9 @@ def drawCorner(originImg,corners):
     return originImg
 
 if __name__ == '__main__':
-    trainMagicPoint(sys.argv[1],True,'model/model_'+sys.argv[2]+'.ckpt',sys.argv[2])
+    #trainMagicPoint(sys.argv[1],True,'model/model_'+sys.argv[2]+'.ckpt',sys.argv[2])
     #testMagicPoint(sys.argv[1],'model/model_'+sys.argv[2]+'.ckpt')
+    testMagicPointForAImg(sys.argv[1],'model/model_'+sys.argv[2]+'.ckpt')
     #img = cv2.imread('2_test.png',0)
     #findPoint(img)
 
