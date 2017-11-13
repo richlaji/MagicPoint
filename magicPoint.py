@@ -286,7 +286,7 @@ def testMagicPoint(dataSetPath,modelName):
         print(test.shape)
         testImage(test,'test')
         for i in range(len(testImgs)):
-            corners = findCorner(test[i])
+            corners = findCorner2(test[i])
             imgWithCorner = drawCorner(testImgs[i],corners)
             cv2.imwrite(str(i+1)+'_withCorner.png',imgWithCorner*255)
 
@@ -329,7 +329,7 @@ def testMagicPointForAImg(filename,modelName):
         print(test.shape)
         testImage(test,'test')
         for i in range(len(testImgs)):
-            corners = findCorner2(test[i])
+            corners = findCorner(test[i])
             imgWithCorner = drawCorner(testImgs[i],corners)
             cv2.imwrite(str(i+1)+'_withCorner.png',imgWithCorner*255)
 
@@ -369,6 +369,7 @@ def findCorner(heatMap):
     corner = []
     for i in range(int(height/8)):
         for j in range(int(width/8)):
+            print(heatMap[i][j][64])
             if heatMap[i][j][64] < 0.01:
                 maxIndex = 0
                 for k in range(64):
@@ -386,7 +387,7 @@ def findCorner2(heatMap):
         for j in range(int(width/8)):
             maxIndex = 64
             for k in range(64):
-                if (heatMap[i][j][k] > heatMap[i][j][maxIndex]) & (heatMap[i][j][k] > 0.08):
+                if (heatMap[i][j][k] > heatMap[i][j][maxIndex]) & (heatMap[i][j][k] > 0.18):
                     maxIndex = k
             if maxIndex != 64:
                 corner.append((int(j*8+maxIndex%8),int(i*8+maxIndex/8)))
