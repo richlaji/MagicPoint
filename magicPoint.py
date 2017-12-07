@@ -387,7 +387,7 @@ def findCorner2(heatMap):
         for j in range(int(width/8)):
             maxIndex = 64
             for k in range(64):
-                if (heatMap[i][j][k] > heatMap[i][j][maxIndex]) & (heatMap[i][j][k] > 0.18):
+                if (heatMap[i][j][k] > heatMap[i][j][maxIndex]) & (heatMap[i][j][k] > 0.1):
                     maxIndex = k
             if maxIndex != 64:
                 corner.append((int(j*8+maxIndex%8),int(i*8+maxIndex/8)))
