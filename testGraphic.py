@@ -6,11 +6,11 @@ import random
 
 if __name__ == '__main__':
     a = []
-    for i in range(4):
-        x = int(random.random()*160)
-        y = int(random.random()*120)
-        a.append([x,y])
+    a.append([10,10])
+    a.append([100,10])
+    a.append([100,100])
+    a.append([10,100])
     a = np.array(a)
-    im = np.zeros([120, 160], dtype = np.uint8)
-    cv2.fillConvexPoly(im, a, random.random()*200+55)
+    im = np.ones([120, 160], dtype = np.uint8)*255
+    cv2.fillConvexPoly(im, a, random.random()*0)
     cv2.imwrite('test.png',im)

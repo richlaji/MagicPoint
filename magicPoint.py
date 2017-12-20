@@ -317,6 +317,7 @@ def testMagicPointForAFolder(path,modelName):
     testImgs = []
     for iName in imgsName:
         tmpImg = cv2.imread(path+'/'+iName,0)
+        print(tmpImg.shape())
         tmpImg = cv2.resize(tmpImg,(width,height),interpolation=cv2.INTER_CUBIC)
         tmpImg = tmpImg.astype(float)
         tmpImg /= 255
