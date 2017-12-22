@@ -3,6 +3,7 @@ import sys
 
 if __name__ == '__main__':
     os.system("git add *.py")
+    os.system("git add GenerateTestImages/*.py")
     print(2)
     print("git commit -m \"" + sys.argv[1] + "\"")
     os.system("git commit -m \"" + sys.argv[1] + "\"")
