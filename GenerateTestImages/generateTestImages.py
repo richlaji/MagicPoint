@@ -88,8 +88,8 @@ def generateDifScalePic(centerX,centerY,xIndex,yIndex,times,color,Width,Height):
         newXIndex = []
         newYIndex = []
         for j in range(len(xIndex)):
-            newXIndex.append(centerX + (xIndex[j] - centerX) * scale)
-            newYIndex.append(centerY + (yIndex[j] - centerY) * scale)
+            newXIndex.append(int(centerX + (xIndex[j] - centerX) * scale))
+            newYIndex.append(int(centerY + (yIndex[j] - centerY) * scale))
         quadrangle = np.array([[newXIndex[0],newYIndex[0]],[newXIndex[1],newYIndex[1]],[newXIndex[2],newYIndex[2]],[newXIndex[3],newYIndex[3]]],dtype = np.int32)
         cv2.fillConvexPoly(img,quadrangle,color)
         imgs.append(img)
@@ -98,12 +98,28 @@ def generateDifScalePic(centerX,centerY,xIndex,yIndex,times,color,Width,Height):
     return imgs
 
 #noise
-def generateNoisePic():
-    return 0
+def generateNoisePic(img,times,xIndex,yIndex):
+    imgs = []
+    newXIndexs = []
+    newYIndexs = []
+    for i in range(times)[1:]:
+        imgGauss = addGaussianNoise(img,i*2)
+        imgs.append(imgGauss)
+        newXIndexs.append(xIndex)  #not return now
+        newYIndexs.append(yIndex)  #not return now
+    return imgs
 
 #blur
-def generateBlurPic():
-    return 0
+def generateBlurPic(img,times):
+    imgs = []
+    newXIndexs = []
+    newYIndexs = []
+    for i in range(times)[1:]:
+        imgBlur = cv2.GaussianBlur(img,(i*2+1,i*2+1),i*1.5)
+        imgs.append(imgBlur)
+        newXIndexs.append(xIndex)  #not return now
+        newYIndexs.append(yIndex)  #not return now
+    return imgs
 
 #test images : ratation, scale, noise, blur
 #
@@ -113,16 +129,21 @@ if __name__ == '__main__':
     Size = 400
     img = np.zeros([Height,Width],dtype = np.uint8)
     img,xIndex,yIndex,color = generateQuadrangleWithCenter(img,Width/2,Height/2,Size,Size)
-    imgsRotation = generateRotationPic(Width/2,Height/2,xIndex,yIndex,36,color,Width,Height)
-    imgsScale = generateDifScalePic(Width/2,Height/2,xIndex,yIndex,5,color,Width,Height)
+    imgsRotation = generateRotationPic(Width/2,Height/2,xIndex,yIndex,12,color,Width,Height)
+    imgsScale = generateDifScalePic(Width/2,Height/2,xIndex,yIndex,10,color,Width,Height)
+    imgsNoise = generateNoisePic(img,20,xIndex,yIndex)
+    imgsBlur = generateBlurPic(img,20)
     #to array
     imgs = [img]
     imgs += imgsRotation
     imgs += imgsScale
+    imgs += imgsNoise
+    imgs += imgsBlur
 
     #write
+    os.system('mkdir ' + sys.argv[1])
     for i in range(len(imgs)):
-        cv2.imwrite(str(i+1)+'.png',imgs[i])
+        cv2.imwrite(sys.argv[1]+'/'+str(i+1)+'.png',imgs[i])
 
     print('finish!')
 
