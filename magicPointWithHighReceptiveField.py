@@ -27,7 +27,8 @@ testTimes = 1000
 saveTimes = 1000
 batchSize = 10
 totalData = 120000
-learningRate = 5e-6
+learningRate = 2e-6
+cornerThreshold = 0.1
 
 #region size. The value in magic point is regionSize
 regionSize = 16
@@ -234,7 +235,7 @@ def trainMagicPoint(dataSetPath,restore,modelName,modelTrainTimes):
 
     #for test
     images,labels = readData(dataSetPath,testIndex,testIndex+2)
-
+    imgsName = [str(i+1)+'.png' for i in range(len(images))]
     #trainNum = 250
     testImgs = images
     testLbs = labels
@@ -260,7 +261,7 @@ def trainMagicPoint(dataSetPath,restore,modelName,modelTrainTimes):
                 #test calculate
                 test = sess.run(softmax,feed_dict={x: testImgs, y_: testLbs, isTrain: False})
                 print(test.shape)
-                testImage(test,str(it))
+                testImage(test,str(it),imgsName)
                 e = time.time()
                 print("cost time: " + str(e-b))
                 b = e
@@ -315,6 +316,17 @@ def testMagicPoint(dataSetPath,modelName):
             imgWithCorner = drawCorner(testImgs[i],corners)
             cv2.imwrite(str(i+1)+'_withCorner.png',imgWithCorner*255)
 
+#compare func
+def comp(a,b):
+    numA = int(a.split('.')[0])
+    numB = int(b.split('.')[0])
+    if numA > numB:
+        return 1
+    elif numB > numA:
+        return -1
+    else:
+        return 0
+
 #test a folder
 def testMagicPointForAFolder(path,modelName):
     # Import data
@@ -339,6 +351,8 @@ def testMagicPointForAFolder(path,modelName):
 
     #test image loading
     imgsName = os.listdir(path)
+    #imgsName = imgsName.sort(comp)
+    print(imgsName)
     testImgs = []
     for iName in imgsName:
         tmpImg = cv2.imread(path+'/'+iName,0)
@@ -360,13 +374,15 @@ def testMagicPointForAFolder(path,modelName):
         
         #new a folder to store result
         os.system('mkdir result')
-        testImage(test,'test')
+        testImage(test,'test',imgsName)
         checkTheSumOfARegion(test)
         for i in range(len(testImgs)):
             print(i+1)
-            corners = findCorner(test[i])
-            imgWithCorner = drawCorner(testImgs[i],corners)
-            cv2.imwrite('result/'+str(i+1)+'_withCorner.png',imgWithCorner*255)
+            corners = findCorner(test[i])  #cv2.KeyPoint
+            testImgs[i] = (testImgs[i]*255).astype(np.uint8)
+            imgWithCorner = cv2.drawKeypoints(testImgs[i],corners,testImgs[i],color=(255,255,255))
+            #imgWithCorner = drawCorner(testImgs[i],corners)
+            cv2.imwrite('result/'+imgsName[i].split('.')[0]+'_withCorner.png',imgWithCorner)
 
 #only test one or more image without training
 def testMagicPointForAImg(filename,modelName):
@@ -416,11 +432,11 @@ def testMagicPointForAImg(filename,modelName):
             cv2.imwrite('result/'+str(i+1)+'_withCorner.png',imgWithCorner*255)
 
 #test image func
-def testImage(test,name):
+def testImage(test,name,imgsName):
     heatMap = []
     max = []
 
-    for t in range(test.shape[0]):
+    for i in range(test.shape[0]):
         heatMap.append(np.zeros([height,width]))
         max.append(0)
 
@@ -432,11 +448,11 @@ def testImage(test,name):
                     if test[t][i][j][k] > max[t]:
                         max[t] = test[t][i][j][k]      
 
-    for t in range(test.shape[0]):
-        print('max of pic ' + str(t + 1) + " is " + str(max[t]))
+    for i in range(test.shape[0]):
+        print('max of pic ' + imgsName[i] + " is " + str(max[i]))
 
-    for t in range(test.shape[0]): 
-        cv2.imwrite('result/'+str(t+1)+'_'+name+'.png',heatMap[t])
+    for i in range(test.shape[0]): 
+        cv2.imwrite('result/' + imgsName[i].split('.')[0] + '_' + name + '.png',heatMap[i])
 
 #find corner through simple way
 def findPoint(heatMap):
@@ -461,13 +477,11 @@ def findCorner(heatMap):
             for k in range(regionSize*regionSize):
                 if heatMap[i][j][k] > heatMap[i][j][maxIndex]:
                     maxIndex = k
-            if heatMap[i][j][maxIndex] > 0.3:
+            if heatMap[i][j][maxIndex] > cornerThreshold:
                 #print(heatMap[i][j][maxIndex])
-                corner.append((int(j*regionSize+maxIndex%regionSize),int(i*regionSize+maxIndex/regionSize)))
+                corner.append(cv2.KeyPoint(int(j*regionSize+maxIndex%regionSize),int(i*regionSize+maxIndex/regionSize),2))
     print('corner:'+str(len(corner)))
     return corner
-
-
 
 
 def drawCorner(originImg,corners):
@@ -496,7 +510,9 @@ def checkLabels(labels):
                         print(int(j*regionSize+k%regionSize),int(i*regionSize+k/regionSize))
 
 if __name__ == '__main__':
-    #trainMagicPoint(sys.argv[1],True,'model/model_'+sys.argv[2]+'.ckpt',sys.argv[2])
+    if sys.argv[1] == 'train':
+        trainMagicPoint(sys.argv[2],True,'model/model_'+sys.argv[3]+'.ckpt',sys.argv[3])
     #testMagicPoint(sys.argv[1],'model/model_'+sys.argv[2]+'.ckpt')
     #testMagicPointForAImg(sys.argv[1],'model/model_'+sys.argv[2]+'.ckpt')
-    testMagicPointForAFolder(sys.argv[1],'model/model_'+sys.argv[2]+'.ckpt')
+    if sys.argv[1] == 'test':
+        testMagicPointForAFolder(sys.argv[2],'model/model_'+sys.argv[3]+'.ckpt')

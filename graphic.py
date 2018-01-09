@@ -51,7 +51,7 @@ def generateQuadrangle(img,startX,startY,Width,Height):
     rby = int(random.random()*(Height/2-2*marginY)+marginY+Height/2)
 
     quadrangle = np.array([[[ltx+startX,lty+startY], [rtx+startX,rty+startY], [rbx+startX,rby+startY], [lbx+startX,lby+startY]]], dtype = np.int32)
-    cv2.fillConvexPoly(img, quadrangle, random.random()*200+55)
+    cv2.fillConvexPoly(img, quadrangle, random.random()*255)
 
     #record corner
     #corner coordinate start from 0
@@ -155,7 +155,7 @@ if __name__ == '__main__':
         #init img
         xIndex = []
         yIndex = []
-        img = generateBackgroundPic(480,640,int(random.random()*200+55))
+        img = generateBackgroundPic(480,640,int(random.random()*100+100))
         xIndex = np.zeros([10,4],dtype=np.int32)
         yIndex = np.zeros([10,4],dtype=np.int32)
         img,xIndex[0,:],yIndex[0,:] = generateQuadrangle(img,0,0,80,60)
@@ -188,15 +188,16 @@ if __name__ == '__main__':
                     corners.append((xIndex[j][k],yIndex[j][k]))
             f.write('\n')
 
-        imgWithCorners = drawCorner(img,corners)
+        #imgWithCorners = drawCorner(img,corners)
 
-        cv2.imshow('corners',imgWithCorners)
-        cv2.waitKey(0)
+        #cv2.imshow('corners',imgWithCorners)
+        #cv2.waitKey(0)
 
         #blur 
-        imBlur = cv2.GaussianBlur(img,(5,5),5)
+        blurKernelSize = int(random.random()*10+1)*2+1
+        imBlur = cv2.GaussianBlur(img,(blurKernelSize,blurKernelSize),random.random()*10)
         #noise
-        imGauss = addGaussianNoise(img)
+        imGauss = addGaussianNoise(img,random.random()*20)
 
         cv2.imwrite(folder+str(i*imgCount)+".png",img)
         cv2.imwrite(folder+str(i*imgCount+1)+".png",imBlur)
