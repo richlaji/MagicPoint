@@ -4,6 +4,7 @@ import os
 import cv2
 import math
 import numpy as np
+import time
 
 def addGaussianNoise(src,degree=10):
     imGaussian = np.zeros([src.shape[0],src.shape[1]], dtype = np.int32)
@@ -62,7 +63,7 @@ def generateRotationPic(centerX,centerY,xIndex,yIndex,times,color,Width,Height):
     imgs = []
     newXIndexs = []
     newYIndexs = []
-    for i in range(times)[1:]:
+    for i in range(times)[0:]:
         img = np.zeros([Height,Width],dtype = np.uint8)
         theta = math.pi * 2 / times * i
         newXIndex = []
@@ -75,16 +76,16 @@ def generateRotationPic(centerX,centerY,xIndex,yIndex,times,color,Width,Height):
         imgs.append(img)
         newXIndexs.append(newXIndex)  #not return now
         newYIndexs.append(newYIndex)  #not return now
-    return imgs
+    return imgs,newXIndexs,newYIndexs
 
 #scale
 def generateDifScalePic(centerX,centerY,xIndex,yIndex,times,color,Width,Height):
     imgs = []
     newXIndexs = []
     newYIndexs = []
-    for i in range(times)[1:]:
+    for i in range(times)[0:]:
         img = np.zeros([Height,Width],dtype = np.uint8)
-        scale = 1.0 / times * i
+        scale = 1.0 / times * (i+1)
         newXIndex = []
         newYIndex = []
         for j in range(len(xIndex)):
@@ -95,31 +96,48 @@ def generateDifScalePic(centerX,centerY,xIndex,yIndex,times,color,Width,Height):
         imgs.append(img)
         newXIndexs.append(newXIndex)  #not return now
         newYIndexs.append(newYIndex)  #not return now
-    return imgs
+    return imgs,newXIndexs,newYIndexs
 
 #noise
 def generateNoisePic(img,times,xIndex,yIndex):
-    imgs = []
+    imgs = []        
     newXIndexs = []
     newYIndexs = []
-    for i in range(times)[1:]:
+    for i in range(times)[0:]:
         imgGauss = addGaussianNoise(img,i*2)
         imgs.append(imgGauss)
         newXIndexs.append(xIndex)  #not return now
         newYIndexs.append(yIndex)  #not return now
-    return imgs
+    return imgs,newXIndexs,newYIndexs
 
 #blur
 def generateBlurPic(img,times):
     imgs = []
     newXIndexs = []
     newYIndexs = []
-    for i in range(times)[1:]:
+    for i in range(times)[0:]:
         imgBlur = cv2.GaussianBlur(img,(i*2+1,i*2+1),i*1.5)
         imgs.append(imgBlur)
         newXIndexs.append(xIndex)  #not return now
         newYIndexs.append(yIndex)  #not return now
-    return imgs
+    return imgs,newXIndexs,newYIndexs
+
+#xIndexs & yIndexs are two-dimension list
+def storeImgAndKps(imgs,xIndexs,yIndexs,iNumber,typeName,imgFolderName,kpsFolderName):
+    iNumber = str(iNumber)
+    for i in range(len(imgs)):
+        #write img
+        cv2.imwrite(imgFolderName+'/'+iNumber+'_'+typeName+'_'+str(i+1)+'.png',imgs[i])
+        writeKps(xIndexs[i],yIndexs[i],kpsFolderName+'/'+iNumber+'_'+typeName+'_'+str(i+1)+'.txt')
+
+def writeKps(xIndex,yIndex,filename):
+    f = open(filename,'w')
+    for i in range(len(xIndex)):
+        f.write(str(xIndex[i]))
+        f.write(',')
+        f.write(str(yIndex[i]))
+        f.write('\n')
+    f.close()
 
 #test images : ratation, scale, noise, blur
 #
@@ -127,23 +145,40 @@ if __name__ == '__main__':
     Width = 640
     Height = 480
     Size = 400
-    img = np.zeros([Height,Width],dtype = np.uint8)
-    img,xIndex,yIndex,color = generateQuadrangleWithCenter(img,Width/2,Height/2,Size,Size)
-    imgsRotation = generateRotationPic(Width/2,Height/2,xIndex,yIndex,12,color,Width,Height)
-    imgsScale = generateDifScalePic(Width/2,Height/2,xIndex,yIndex,10,color,Width,Height)
-    imgsNoise = generateNoisePic(img,20,xIndex,yIndex)
-    imgsBlur = generateBlurPic(img,20)
-    #to array
-    imgs = [img]
-    imgs += imgsRotation
-    imgs += imgsScale
-    imgs += imgsNoise
-    imgs += imgsBlur
+    imageNumber = int(sys.argv[2])
+    #mkdir folder
+    #total 8 folder now
+    folderNames = ['Rotation','Scale','Noise','Blur']
+    for fname in folderNames:
+        os.system('mkdir ' + sys.argv[1] + fname)
+        os.system('mkdir ' + sys.argv[1] + fname + 'kps')
+    
+    for iNum in range(imageNumber):
+        begin = time.time()
 
-    #write
-    os.system('mkdir ' + sys.argv[1])
-    for i in range(len(imgs)):
-        cv2.imwrite(sys.argv[1]+'/'+str(i+1)+'.png',imgs[i])
+        #generate image
+        img = np.zeros([Height,Width],dtype = np.uint8)
+        img,xIndex,yIndex,color = generateQuadrangleWithCenter(img,Width/2,Height/2,Size,Size)
+        
+        #Rotation
+        imgsRotation,xIndexs,yIndexs = generateRotationPic(Width/2,Height/2,xIndex,yIndex,12,color,Width,Height)
+        storeImgAndKps(imgsRotation,xIndexs,yIndexs,iNum,folderNames[0],sys.argv[1] + folderNames[0],sys.argv[1] + folderNames[0]+'kps')
+
+        #Scale
+        imgsScale,xIndexs,yIndexs = generateDifScalePic(Width/2,Height/2,xIndex,yIndex,10,color,Width,Height)
+        storeImgAndKps(imgsScale,xIndexs,yIndexs,iNum,folderNames[1],sys.argv[1] + folderNames[1],sys.argv[1] + folderNames[1]+'kps')
+
+        #Noise
+        imgsNoise,xIndexs,yIndexs = generateNoisePic(img,20,xIndex,yIndex)
+        storeImgAndKps(imgsNoise,xIndexs,yIndexs,iNum,folderNames[2],sys.argv[1] + folderNames[2],sys.argv[1] + folderNames[2]+'kps')
+
+        #Blur
+        imgsBlur,xIndexs,yIndexs = generateBlurPic(img,20)
+        storeImgAndKps(imgsBlur,xIndexs,yIndexs,iNum,folderNames[3],sys.argv[1] + folderNames[3],sys.argv[1] + folderNames[3]+'kps')
+
+        end = time.time()
+
+        print(str(iNum)+' cost time : ' + str(end-begin))
 
     print('finish!')
 
